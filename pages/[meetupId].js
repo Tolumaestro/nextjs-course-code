@@ -1,48 +1,66 @@
+import { MongoClient, ObjectId } from "mongodb";
 import MeetupDetail from "../components/meetups/MeetupDetail";
 
-const meetupDetails = () => {
+const meetupDetails = (props) => {
+  const { image, title, address, description } = props.meetUpData;
   return (
     <MeetupDetail
-      image="http://t3.gstatic.com/licensed-image?q=tbn:ANd9GcSCo-31ziv39ojQBP2FDIMD2giQb3L4SsUv7tLuqARsvjzjU2krYaNo0DeZDaxkeeMVsI91HDObcbxB2__3SF0"
-      title="A First Meetup"
-      address="Some address, city, state"
-      description="The meetup description"
+      image={image}
+      title={title}
+      address={address}
+      description={description}
     />
   );
 };
 
-export const getStaticPaths = () => {
+export const getStaticPaths = async () => {
+  const client = await MongoClient.connect(
+    "mongodb+srv://admin-tolu:Test123@cluster0.1noibfp.mongodb.net/meetups?retryWrites=true&w=majority"
+  );
+
+  const db = client.db();
+
+  const meetupsCollection = db.collection("meetups");
+
+  const meetups = await meetupsCollection.find({}, { _id: 1 }).toArray();
+
+  client.close();
+
   return {
     fallback: false,
-    paths: [
-      {
-        params: {
-          meetupId: "m1",
-        },
+    paths: meetups.map((meetup) => ({
+      params: {
+        meetupId: meetup._id.toString(),
       },
-      {
-        params: {
-          meetupId: "m2",
-        },
-      },
-    ],
+    })),
   };
 };
 
 export const getStaticProps = async (context) => {
   const meetupId = context.params.meetupId;
 
-  console.log(meetupId);
+  const client = await MongoClient.connect(
+    "mongodb+srv://admin-tolu:Test123@cluster0.1noibfp.mongodb.net/meetups?retryWrites=true&w=majority"
+  );
+
+  const db = client.db();
+
+  const meetupsCollection = db.collection("meetups");
+
+  const selectedMeetup = await meetupsCollection.findOne({
+    _id: ObjectId(meetupId),
+  });
+
+  client.close();
 
   return {
     props: {
       meetUpData: {
-        id: meetupId,
-        image:
-          "http://t3.gstatic.com/licensed-image?q=tbn:ANd9GcSCo-31ziv39ojQBP2FDIMD2giQb3L4SsUv7tLuqARsvjzjU2krYaNo0DeZDaxkeeMVsI91HDObcbxB2__3SF0",
-        title: "A First Meetup",
-        address: "Some address, city, state",
-        description: "The meetup description",
+        id: selectedMeetup._id.toString(),
+        title: selectedMeetup.title,
+        address: selectedMeetup.address,
+        image: selectedMeetup.image,
+        description: selectedMeetup.description,
       },
     },
   };
